@@ -7,6 +7,8 @@
 
 
 #include "os_timer_schedual.h"
+#include "os_queue_manage.h"
+
 #include "list.h"
 #include "log.h"
 #include "lock.h"
@@ -39,7 +41,7 @@ INT32 os_timerSchedualInit(UINT32 ulTimerRateMs)
 	pthread_t  timerThreadId = 0;
     bzero(stTimerPool,sizeof(stTimerPool));
 
-	if(0 == ulTimeRate)
+	if(0 == ulTimerRateMs)
 	{
 		return RT_SUCCESS;
 	}
@@ -53,7 +55,7 @@ INT32 os_timerSchedualInit(UINT32 ulTimerRateMs)
 	LOCK_MUTEX_INIT(&stMutexForTimer,"Timer’s mutex");
     ulTimerCurTick = 0;
     ulTimeRate     = (ulTimerRateMs > 1000) ? (500 * 1000) : (ulTimerRateMs * 1000);
-    //if (FUNC_NULL == func_CreateAThread(PRIORITY_TIMER, 16*1024, os_timerSchedualTask, NULL, MID_APP_TIMER))
+
 	if(pthread_create(&timerThreadId,NULL,os_timerSchedualTask,NULL) !=0 )
     {
 		SYS_TRACE("Create timer sys failed");
@@ -193,11 +195,12 @@ INT32 os_timerAddNewOne(UINT32 ulTimeMs,OS_TIMER_TYPE eTimerType,OS_TIMER_MSG_TY
 {
 	if(0 == ulTimeMs || 0 == ulTimeRate)
 	{
+		SYS_TRACE("Add new timer failed ulTimeMs = %d ulTimeRate = %d \n",ulTimeMs,ulTimeRate);
 		return RT_FAILED;
 	}
 	INT32 slRet = RT_SUCCESS;
 
-	UINT32 ulDelay = ulTimeMs < ulTimeRate ? 1 : (ulTimeMs / ulTimeRate);
+	UINT32 ulDelay = ulTimeMs < OS_TIMER_RATE ? 1 : (ulTimeMs / OS_TIMER_RATE);
 
 	OS_TIMER_SCHEDUAL_INFO *pstTimerInfo = OS_MEM_MALLOC(sizeof(OS_TIMER_SCHEDUAL_INFO));
 	if(NULL == pstTimerInfo)
@@ -214,6 +217,7 @@ INT32 os_timerAddNewOne(UINT32 ulTimeMs,OS_TIMER_TYPE eTimerType,OS_TIMER_MSG_TY
 	pstTimerInfo->eTimerState = OS_TMR_STATE_STOPPED;
 	pstTimerInfo->eTimerMsgType = eTimerMsgType;
 	pstTimerInfo->eHandleTaskId = eTaskId;
+	pstTimerInfo->ulMsgSize     = ulMsgSize;
 	pstTimerInfo->pData         = pData;
 	slRet = os_TimerPutToPool(pstTimerInfo);
 	LOCK_MUTEX_UNLOCK(&stMutexForTimer);

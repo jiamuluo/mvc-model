@@ -48,9 +48,10 @@ void log_trace(OS_TASK_ID eTask,LOG_LEVEL eLogLevel, const char * pstrFormat, ..
     if(strlen(pstrFormat) < MAX_TRACE_LEN)
 	{
 		va_start (listVars, pstrFormat);
+        vsprintf(strInfo, pstrFormat, listVars);
 		va_end (listVars);
 
-		printf("strInfo = %s \n",strInfo);
+		printf("strInfo = %s\n",strInfo);
 		syslog(eLogLevel,"%s", strInfo);
 	}
 	else

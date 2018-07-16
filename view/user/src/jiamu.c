@@ -16,7 +16,8 @@ void jiamu_init(void *arg)
     memset(pucMsg,0,64);
     strcpy(pucMsg,"This is jiamu timer \n");
 
-    os_timerAddNewOne(1000,
+    printf("Init jiamu task \n");
+    os_timerAddNewOne(5000,
                     OS_OPT_TMR_PERIODIC,
                     TIMER_OUTPUT,
                     _TASK_JIAMU,

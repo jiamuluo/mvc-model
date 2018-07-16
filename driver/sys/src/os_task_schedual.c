@@ -21,16 +21,35 @@ void os_task_shedualInit(void)
 
 static void *os_taskSelfShedual(void *data)
 {
-    OS_TASK_CTRL *taskInfo = (OS_TASK_CTRL *)data;
+   
+    OS_TASK_CTRL *pstTaskInfo = (OS_TASK_CTRL *)data;
+    char ascName[128] = {0};
+    bzero(ascName,128);
+    sprintf(ascName,"Task %s's mutex",pstTaskInfo->strTaskName);
+    LOCK_MUTEX_INIT(&pstTaskInfo->stMutexLock,ascName);
 
-    log_setTaskLogLevel(taskInfo->ulLogLevel,taskInfo->eTaskId);
-    taskInfo->funcInit(data);
+    bzero(ascName,128);
+    sprintf(ascName,"Task %s's sem",pstTaskInfo->strTaskName);
+    LOCK_SEM_INIT(&pstTaskInfo->stSemInfo,ascName);
+    LOCK_SEM_RESET(&pstTaskInfo->stSemInfo);
+
+    bzero(ascName,128);
+    sprintf(ascName,"Task %s's spinlock",pstTaskInfo->strTaskName);
+    LOCK_SPIN_INIT(&pstTaskInfo->stSpinLock,ascName);
+
+    printf("task %s is running \n",pstTaskInfo->strTaskName);
+    log_setTaskLogLevel(pstTaskInfo->ulLogLevel,pstTaskInfo->eTaskId);
+
+    os_create_taskque(pstTaskInfo);
+
+    pstTaskInfo->funcInit(data);
 
     while(1)
     {
-        Q_OS_PEND(&taskInfo->stSemInfo);
+        printf("task %s is pending message  \n",pstTaskInfo->strTaskName);
+        Q_OS_PEND(&pstTaskInfo->stSemInfo);
 
-        
+        os_queue_handle_msg(pstTaskInfo);
     }
     return NULL;
 }
@@ -52,11 +71,10 @@ INT32 os_getTaskSelfInfo(const pthread_t id,OS_TASK_CTRL *pstTask)
     return RT_FAILED;
 }
 
-INT32 os_commonThreadCreate(UINT32 ulStackSize,INT32 slPriority,pthreadCb funcCb,void *threadData)
+INT32 os_commonThreadCreate(UINT32 ulStackSize,INT32 slPriority,pthreadCb funcCb,void *threadData,pthread_t *id)
 {
 
     INT32 slRet = RT_SUCCESS;
-	void *paStackAddr = NULL;
 	pthread_attr_t stThreadAttr;
 	pthread_t      stThreadId = 0;
     struct sched_param stSchedParam;
@@ -65,7 +83,7 @@ INT32 os_commonThreadCreate(UINT32 ulStackSize,INT32 slPriority,pthreadCb funcCb
     stSchedParam.sched_priority = slPriority;
 
     pthread_attr_init(&stThreadAttr);
-    if(pthread_attr_setstack (&stThreadAttr, paStackAddr, ulLeastSize) != 0)
+    if(pthread_attr_setstacksize (&stThreadAttr, ulLeastSize) != 0)
     {
         printf("set statck size failed \n");
     }
@@ -80,8 +98,9 @@ INT32 os_commonThreadCreate(UINT32 ulStackSize,INT32 slPriority,pthreadCb funcCb
         printf("Create thread failed \n");
     }
     pthread_attr_destroy(&stThreadAttr);
+    *id = stThreadId;
 
-    return slRet < 0 ? slRet : (INT32)stThreadId;
+    return slRet;
 }
 
 
@@ -91,35 +110,20 @@ INT32 os_taskCreateInit(OS_TASK_CTRL *pstTaskInfo)
     {
         return RT_ARG_INVALID;
     }   
-    //1.队列的初始化
-    //队列怎么设计????????
-
-    //2.任务资源
-    char ascName[128] = {0};
-    bzero(ascName,128);
-    sprintf(ascName,"Task %s's mutex",pstTaskInfo->strTaskName);
-    LOCK_MUTEX_INIT(&pstTaskInfo->stMutexLock,ascName);
-
-    bzero(ascName,128);
-    sprintf(ascName,"Task %s's sem",pstTaskInfo->strTaskName);
-    LOCK_SEM_INIT(&pstTaskInfo->stSemInfo,ascName);
-
-    bzero(ascName,128);
-    sprintf(ascName,"Task %s's spinlock",pstTaskInfo->strTaskName);
-    LOCK_SPIN_INIT(&pstTaskInfo->stSpinLock,ascName);
-    
-    INT32 slRet = os_commonThreadCreate(pstTaskInfo->ulStatckSize,pstTaskInfo->slPriority,os_taskSelfShedual,(void *)&pstTaskInfo);
+  
+    //1.任务资源
+    printf("Now need create task %s \n",pstTaskInfo->strTaskName);
+    pthread_t id;
+    INT32 slRet = os_commonThreadCreate(pstTaskInfo->ulStatckSize,pstTaskInfo->slPriority,os_taskSelfShedual,(void *)pstTaskInfo,&id);
     if(slRet < 0)
     {
-        LOCK_MUTEX_DEINIT(&pstTaskInfo->stMutexLock);
-        LOCK_SEM_DEINIT(&pstTaskInfo->stSemInfo);
-        LOCK_SPIN_DEINIT(&pstTaskInfo->stSpinLock);
         SYS_TRACE("Task %s create failed",pstTaskInfo->strTaskName);
+        exit(-1);
         return RT_ARG_INVALID;
     }
 
     stTaskInfo[pstTaskInfo->eTaskId].isAlive = true;
-    stTaskInfo[pstTaskInfo->eTaskId].selfId  = (pthread_t)slRet;
+    stTaskInfo[pstTaskInfo->eTaskId].selfId  = (pthread_t)id;
     stTaskInfo[pstTaskInfo->eTaskId].strTaskName = pstTaskInfo->strTaskName;
 
     SYS_TRACE("Task %s create Success",pstTaskInfo->strTaskName);

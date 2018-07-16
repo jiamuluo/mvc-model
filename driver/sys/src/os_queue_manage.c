@@ -121,6 +121,7 @@ int os_queue_handle_msg(OS_TASK_CTRL* pstTaskInfo)
 		OS_MEM_FREE(pstRecord[i]);
 		pstRecord[i] = NULL;
 	}
+    pstQue->ulNbrEntries--;
 	LOCK_MUTEX_UNLOCK(pstQue->pstQueueMutexLock);
 
     return RT_SUCCESS;

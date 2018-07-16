@@ -43,7 +43,7 @@ void lock_SemTryWait(sem_t* pstSem,const char * strFunName,UINT32 ulLine);
 int lock_SemTimeWait(sem_t* pstSem, UINT32 uiSeconds, UINT32 uiNanoseconds,const char * strFunName,UINT32 ulLine);
 
 #define LOCK_SEM_INIT(sem,name)                 lock_SemCreate(sem,name)
-#define LOCK_SEM_DEINIT(sem)               lock_semDetroy(sem)
+#define LOCK_SEM_DEINIT(sem)                    lock_semDetroy(sem)
 #define LOCK_SEM_POST(sem)                      lock_SemPost(sem,__FUNCTION__,__LINE__)
 #define LOCK_SEM_WAIT(sem)                      lock_SemWait(sem,__FUNCTION__,__LINE__)
 #define LOCK_SEM_TRY(sem)                       lock_SemTryWait(sem,__FUNCTION__,__LINE__)

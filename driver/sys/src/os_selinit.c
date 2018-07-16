@@ -13,6 +13,7 @@ extern INT32 os_mem_init(void);
 extern INT32 os_timerSchedualInit(UINT32 ulTimerRateMs);
 extern void log_init(const char * strAppName);
 extern void os_queue_init(void);
+extern void os_task_shedualInit(void);
 
 void os_checkExist(void)
 {
@@ -78,19 +79,28 @@ void os_init(void)
     os_checkExist();
 
     //let app becomes a deamon 
-    os_deamon_init();
+   // os_deamon_init();
 
     //init log system
     log_init(APP_NAME);
 
+	printf("Now init queue \n");
 	//init queue manage system
 	os_queue_init();
 
+	printf("Now init memeory \n");
     //init memory mannage system
     os_mem_init();
     
+	printf("Now init timer \n");
     //init timer driver system
     os_timerSchedualInit(OS_TIMER_RATE);
+
+	printf("Now init ttask \n");
+	//init task shedual system
+	os_task_shedualInit();
+
+	printf("Os is init ok \n");
 }
 /**
  * @brief you can do any thing here but exit
@@ -100,6 +110,7 @@ void os_hook(void)
 {
 	while(1)
 	{
+		printf("Monitor app \n");
 		sleep(10);
 	}
 }
