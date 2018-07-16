@@ -1,0 +1,6 @@
+/_install/*
+/.vscode/*
+*.so
+*.o
+
+
