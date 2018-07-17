@@ -49,11 +49,11 @@ int os_send_msg(OS_TASK_ID eDstTask ,bool isTimer,OS_QUE_MSG_TYPE eMsgType,UINT3
     OS_QUEUE *pstQue = &stQueueManager[eDstTask];
     OS_MSG_Q *pstMsg =  OS_MEM_MALLOC(sizeof(OS_MSG_Q));
 
-    LOCK_MUTEX_LOCK(pstQue->pstQueueMutexLock);
-
+    //LOCK_MUTEX_LOCK(pstQue->pstQueueMutexLock);
+    pthread_mutex_lock(pstQue->pstQueueMutexLock);
     if(pstQue->ulNbrEntries >= pstQue->ulNbrEntriesSize)
     {
-        SYS_TRACE("Send message to  dst %d ,but task queue is fill,msg is %d ",eDstTask,eMsgType);
+        SYS_TRACE("Send message to  dst %d ,but task queue is fill max is %d ,msg is %d ",eDstTask,pstQue->ulNbrEntriesSize,eMsgType);
         LOCK_MUTEX_UNLOCK(pstQue->pstQueueMutexLock);
         OS_MEM_FREE(pstMsg);
         return RT_ARG_INVALID;
@@ -71,8 +71,8 @@ int os_send_msg(OS_TASK_ID eDstTask ,bool isTimer,OS_QUE_MSG_TYPE eMsgType,UINT3
     {
          pstQue->ulNbrEntriesMax = pstQue->ulNbrEntries;
     }
-    LOCK_MUTEX_UNLOCK(pstQue->pstQueueMutexLock);
-
+    //LOCK_MUTEX_UNLOCK(pstQue->pstQueueMutexLock);
+    pthread_mutex_unlock(pstQue->pstQueueMutexLock);
     LOCK_SEM_POST(pstQue->pstSemInfo);
 
     return RT_SUCCESS;
@@ -89,10 +89,10 @@ int os_queue_handle_msg(OS_TASK_CTRL* pstTaskInfo)
 	OS_MSG_Q *pstMsg = NULL;
 
 	UINT32 ulIndex = 0;
-	UINT32 ulQuote = 5;
 	OS_MSG_Q *pstRecord[OS_QUEUE_MAX] = {NULL};
-
-	LOCK_MUTEX_LOCK(pstQue->pstQueueMutexLock);
+    //do not recrd task's lock running info
+	//LOCK_MUTEX_LOCK(pstQue->pstQueueMutexLock);
+    pthread_mutex_lock(pstQue->pstQueueMutexLock);
 	list_for_each(pstTmp,&pstQue->stMsgQ.stListEntry)
 	{
 		pstMsg = NULL;
@@ -122,8 +122,8 @@ int os_queue_handle_msg(OS_TASK_CTRL* pstTaskInfo)
 		pstRecord[i] = NULL;
 	}
     pstQue->ulNbrEntries--;
-	LOCK_MUTEX_UNLOCK(pstQue->pstQueueMutexLock);
-
+	//LOCK_MUTEX_UNLOCK(pstQue->pstQueueMutexLock);
+    pthread_mutex_unlock(pstQue->pstQueueMutexLock);
     return RT_SUCCESS;
 }
 

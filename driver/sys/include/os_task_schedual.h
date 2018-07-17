@@ -58,7 +58,7 @@ typedef struct
 
 typedef struct
 {
-	const char *     strTaskName;
+	char strTaskName[64];
 	pthread_t  selfId;
 	bool       isAlive;
 }TASK_RECORD_INFO;
@@ -67,6 +67,6 @@ typedef struct
 typedef void *(pthreadCb)(void *);
 
 INT32 os_getTaskSelfInfo(const pthread_t id,OS_TASK_CTRL *pstTask);
-INT32 os_commonThreadCreate(UINT32 ulStackSize,INT32 slPriority,pthreadCb funcCb,void *threadData,pthread_t *id);
+INT32 os_commonThreadCreate(UINT32 ulStackSize,INT32 slPriority,pthreadCb funcCb,void *threadData,pthread_t *id,const char *name);
 INT32 os_taskCreateInit(OS_TASK_CTRL *pstTaskInfo);
 #endif

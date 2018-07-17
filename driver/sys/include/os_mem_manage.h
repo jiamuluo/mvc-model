@@ -21,7 +21,7 @@ typedef struct
     UINT32 ulHash;
     UINT32 ulMagic;
     struct list_head stListEntry;
-    #ifdef MDEBUG_MEM
+    #ifdef DEBUG_MEM
     UINT32 ulLine;
     INT8 ascFuncName[64];
     INT8 ascTime[64];

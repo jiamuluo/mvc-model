@@ -46,7 +46,7 @@ static void *os_taskSelfShedual(void *data)
 
     while(1)
     {
-        printf("task %s is pending message  \n",pstTaskInfo->strTaskName);
+        //printf("task %s is pending message  \n",pstTaskInfo->strTaskName);
         Q_OS_PEND(&pstTaskInfo->stSemInfo);
 
         os_queue_handle_msg(pstTaskInfo);
@@ -71,7 +71,7 @@ INT32 os_getTaskSelfInfo(const pthread_t id,OS_TASK_CTRL *pstTask)
     return RT_FAILED;
 }
 
-INT32 os_commonThreadCreate(UINT32 ulStackSize,INT32 slPriority,pthreadCb funcCb,void *threadData,pthread_t *id)
+INT32 os_commonThreadCreate(UINT32 ulStackSize,INT32 slPriority,pthreadCb funcCb,void *threadData,pthread_t *id,const char *name)
 {
 
     INT32 slRet = RT_SUCCESS;
@@ -100,6 +100,21 @@ INT32 os_commonThreadCreate(UINT32 ulStackSize,INT32 slPriority,pthreadCb funcCb
     pthread_attr_destroy(&stThreadAttr);
     *id = stThreadId;
 
+    if(RT_SUCCESS == slRet)
+    {
+        UINT32 i = 0;
+        for(;i < _TASK_MAX;i++)
+        {
+            if(stTaskInfo[i].isAlive == false)
+            {
+                stTaskInfo[i].isAlive = true;
+                stTaskInfo[i].selfId  = stThreadId;
+                strncpy(stTaskInfo[i].strTaskName,name,sizeof(stTaskInfo[i].strTaskName));
+            }
+        }
+    }
+   
+
     return slRet;
 }
 
@@ -114,17 +129,13 @@ INT32 os_taskCreateInit(OS_TASK_CTRL *pstTaskInfo)
     //1.任务资源
     printf("Now need create task %s \n",pstTaskInfo->strTaskName);
     pthread_t id;
-    INT32 slRet = os_commonThreadCreate(pstTaskInfo->ulStatckSize,pstTaskInfo->slPriority,os_taskSelfShedual,(void *)pstTaskInfo,&id);
+    INT32 slRet = os_commonThreadCreate(pstTaskInfo->ulStatckSize,pstTaskInfo->slPriority,os_taskSelfShedual,(void *)pstTaskInfo,&id,pstTaskInfo->strTaskName);
     if(slRet < 0)
     {
         SYS_TRACE("Task %s create failed",pstTaskInfo->strTaskName);
         exit(-1);
         return RT_ARG_INVALID;
     }
-
-    stTaskInfo[pstTaskInfo->eTaskId].isAlive = true;
-    stTaskInfo[pstTaskInfo->eTaskId].selfId  = (pthread_t)id;
-    stTaskInfo[pstTaskInfo->eTaskId].strTaskName = pstTaskInfo->strTaskName;
 
     SYS_TRACE("Task %s create Success",pstTaskInfo->strTaskName);
     return RT_SUCCESS;

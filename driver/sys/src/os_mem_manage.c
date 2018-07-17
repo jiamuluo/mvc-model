@@ -9,6 +9,7 @@
 #include "os_mem_manage.h"
 #include <stdlib.h>
 #include "lock.h"
+#include "tool_time.h"
 
 static pthread_mutex_t stMemMutexLock;
 static OS_MEM_POOL     stMemPool[OS_MEM_POOL_SIZE];
@@ -20,7 +21,8 @@ void *os_mem_malloc(UINT32 ulSize,const char* strFile,const char* strFun,const U
     LIST_S *pstTmp = NULL;
 
     //find hash table
-    LOCK_MUTEX_LOCK(&stMemMutexLock);
+   // LOCK_MUTEX_LOCK(&stMemMutexLock);
+    pthread_mutex_unlock(&stMemMutexLock);
     if(!list_empty_careful(&stMemPool[ulHash].stMemMangeHead.stListEntry))
     {
        
@@ -48,13 +50,15 @@ void *os_mem_malloc(UINT32 ulSize,const char* strFile,const char* strFun,const U
     if(stMemPool[ulHash].usCurrentEntry >= stMemPool[ulHash].usMaxEntry)
     {
         SYS_TRACE("Hash %d need to extend ",ulHash);
-        LOCK_MUTEX_UNLOCK(&stMemMutexLock);
+        //LOCK_MUTEX_UNLOCK(&stMemMutexLock);
+        pthread_mutex_unlock(&stMemMutexLock);
         return NULL;
     }
     pstMemInfo = malloc(sizeof(OS_MEM_CTRL) + ulSize);
     if(NULL == pstMemInfo)
     {
-        LOCK_MUTEX_UNLOCK(&stMemMutexLock);
+        //LOCK_MUTEX_UNLOCK(&stMemMutexLock);
+        pthread_mutex_unlock(&stMemMutexLock);
         return NULL;
     }
     memset(pstMemInfo,0,sizeof(OS_MEM_CTRL) + ulSize);
@@ -84,11 +88,13 @@ mem_malloc:
     memset(pstMemInfo->ascFuncName,0,sizeof(pstMemInfo->ascFuncName));
     memset(pstMemInfo->ascTime,0,sizeof(pstMemInfo->ascTime));
     strncpy(pstMemInfo->ascFuncName,strFun,sizeof(pstMemInfo->ascFuncName));
-
-    pstMemInfo->ascFuncName = ulLine;
+    time_GetCurrentTimeus(pstMemInfo->ascTime,sizeof(pstMemInfo->ascTime));
+    pstMemInfo->ulLine = ulLine;
+    SYS_CRIT("MEM POOL %d alloc a block size %d ,Line %d Function:%s Time:%s", pstMemInfo->ulHash,pstMemInfo->ulSize,ulLine,strFun,pstMemInfo->ascTime);
     #endif
     pstMemInfo->ulMagic = MEM_MAGIC_NUM;
-    LOCK_MUTEX_UNLOCK(&stMemMutexLock);
+    //LOCK_MUTEX_UNLOCK(&stMemMutexLock);
+    pthread_mutex_unlock(&stMemMutexLock);
     memset(pstMemInfo->mem,ulSize,0);
     return pstMemInfo->mem;
 }
@@ -133,7 +139,8 @@ void os_mem_free(void *ptr,const char* strFile,const char* strFun,const UINT32 u
         }
         #endif
         
-        LOCK_MUTEX_LOCK(&stMemMutexLock);
+        //LOCK_MUTEX_LOCK(&stMemMutexLock);
+        pthread_mutex_lock(&stMemMutexLock);
         pstFind->ulMagic = 0;
         pstFind->isBusy  = false;
         //list_add_pre(&pstFind->stListEntry,true == isFind ? &pstMemInfo->stListEntry : &stMemPool[ulHash].stListEntry);
@@ -141,10 +148,12 @@ void os_mem_free(void *ptr,const char* strFile,const char* strFun,const UINT32 u
         memset(pstFind->ascFuncName,0,sizeof(pstFind->ascFuncName));
         memset(pstFind->ascTime,0,sizeof(pstFind->ascTime));
         strncpy(pstFind->ascFuncName,strFun,sizeof(pstFind->ascFuncName));
-
-        pstFind->ascFuncName = ulLine;
+        time_GetCurrentTimeus(pstFind->ascTime,sizeof(pstFind->ascTime));
+        pstFind->ulLine = ulLine;
+        SYS_CRIT("MEM POOL %d realse a block size %d ,Line %d Function:%s Time:%s", pstFind->ulHash,pstFind->ulSize,ulLine,strFun,pstFind->ascTime);
         #endif
-        LOCK_MUTEX_UNLOCK(&stMemMutexLock);
+        //LOCK_MUTEX_UNLOCK(&stMemMutexLock);
+        pthread_mutex_unlock(&stMemMutexLock);
      }
      else
      {
@@ -153,6 +162,38 @@ void os_mem_free(void *ptr,const char* strFile,const char* strFun,const UINT32 u
       
 }
 
+void os_mem_check(void)
+{
+    UINT32 i = 0,j = 0;
+    UINT32 ulFreeNum = 0;
+    OS_MEM_CTRL *pstMemInfo = NULL;
+    LIST_S *pstTmp = NULL;
+
+    LOCK_MUTEX_LOCK(&stMemMutexLock);
+    for(i = 0;i < OS_MEM_POOL_SIZE;i++)
+    {
+        ulFreeNum  = 0;
+        SYS_TRACE("******MEM POOL %d has total %d block,max is %d *********",i,stMemPool[i].usCurrentEntry,stMemPool[i].usMaxEntry);
+        list_for_each(pstTmp,&stMemPool[i].stMemMangeHead.stListEntry)
+        {
+            pstMemInfo = NULL;
+        
+            if((pstMemInfo = list_entry(pstTmp,OS_MEM_CTRL,stListEntry)) != NULL) 
+            {
+                const char *strStatus = "Status Busy,alloced by";
+                if(pstMemInfo->isBusy != true)
+                {
+                    strStatus = "Status Free,relesed by";
+                    ulFreeNum++;
+                }
+                SYS_TRACE("%d: %s Line: %d Function:%s Time:%s",j,strStatus,pstMemInfo->isBusy,pstMemInfo->ulLine,pstMemInfo->ascFuncName,pstMemInfo->ascTime);
+                j++;
+            }
+        }
+        SYS_TRACE("********MEM POOL %d has free block %d ******************",ulFreeNum);
+    }
+    LOCK_MUTEX_UNLOCK(&stMemMutexLock);
+}
 INT32 os_mem_init(void)
 {
     int i = 0;

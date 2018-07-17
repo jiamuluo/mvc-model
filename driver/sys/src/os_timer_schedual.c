@@ -26,12 +26,15 @@ void *os_timerSchedualTask(void *data)
 {
 
     while(1)
-    {
+    {	
+		//do not recrd timer's lock running info
         usleep(ulTimeRate);
-		LOCK_MUTEX_LOCK(&stMutexForTimer);
+		//LOCK_MUTEX_LOCK(&stMutexForTimer);
+		pthread_mutex_lock(&stMutexForTimer);
 		ulTimerCurTick++;
 		os_TimerQueryExpire();
-		LOCK_MUTEX_UNLOCK(&stMutexForTimer);
+		//LOCK_MUTEX_UNLOCK(&stMutexForTimer);
+		pthread_mutex_unlock(&stMutexForTimer);
     }
 }
 
@@ -56,7 +59,7 @@ INT32 os_timerSchedualInit(UINT32 ulTimerRateMs)
     ulTimerCurTick = 0;
     ulTimeRate     = (ulTimerRateMs > 1000) ? (500 * 1000) : (ulTimerRateMs * 1000);
 
-	if(pthread_create(&timerThreadId,NULL,os_timerSchedualTask,NULL) !=0 )
+	if(os_commonThreadCreate(16 * 1024,0,os_timerSchedualTask,NULL,&timerThreadId,"Timer thread") !=0 )
     {
 		SYS_TRACE("Create timer sys failed");
     	return RT_FAILED;
@@ -101,20 +104,6 @@ static void os_TimerQueryExpire(void)
 		pstTimerNode = stExpireTime[i];
 		list_del(&pstTimerNode->stListEntry);
 		
-		#if 0
-		FUNC_MSG_S *pstMsg	= NULL;
-		pstMsg = (FUNC_MSG_S *)OS_MEM_MALLOC(sizeof(FUNC_MSG_S) + 4);	
-		//FUNC_ASSERT(FUNC_NULL != pstMsg);
-		func_MemSet(pstMsg, 0x00, sizeof(FUNC_MSG_S) + 4);
-	
-		pstMsg->eMidTo = pstTimerNode->eHandleTaskId;
-		pstMsg->eMidFrom = MID_APP_TIMER;
-		pstMsg->ulMessageId = pstTimerNode->eTimerMsgType;
-		pstMsg->ulMsgType   = FUNC_MESSAGE_TYPE_TIMER;
-		pstMsg->usLength    = sizeof(UINT32);
-		memcpy(pstMsg->ucBody,&pstTimerNode->pData,sizeof(UINT32));
-		func_SendMessage(pstMsg);
-		#endif
 		os_send_msg(pstTimerNode->eHandleTaskId,true,pstTimerNode->eTimerMsgType,pstTimerNode->ulMsgSize,pstTimerNode->pData);
 
 		if(OS_OPT_TMR_ONE_SHOT == pstTimerNode->eTimerType)
@@ -209,7 +198,8 @@ INT32 os_timerAddNewOne(UINT32 ulTimeMs,OS_TIMER_TYPE eTimerType,OS_TIMER_MSG_TY
 	}
 	memset(pstTimerInfo,0,sizeof(OS_TIMER_SCHEDUAL_INFO));
 
-	LOCK_MUTEX_LOCK(&stMutexForTimer);
+	//LOCK_MUTEX_LOCK(&stMutexForTimer);
+	pthread_mutex_lock(&stMutexForTimer);
 	pstTimerInfo->ulDelay  = ulDelay;
 	pstTimerInfo->ulExpire = ulDelay + ulTimerCurTick;
 	pstTimerInfo->ulRemain = ulDelay;
@@ -220,8 +210,8 @@ INT32 os_timerAddNewOne(UINT32 ulTimeMs,OS_TIMER_TYPE eTimerType,OS_TIMER_MSG_TY
 	pstTimerInfo->ulMsgSize     = ulMsgSize;
 	pstTimerInfo->pData         = pData;
 	slRet = os_TimerPutToPool(pstTimerInfo);
-	LOCK_MUTEX_UNLOCK(&stMutexForTimer);
-
+	//LOCK_MUTEX_UNLOCK(&stMutexForTimer);
+	pthread_mutex_unlock(&stMutexForTimer);
 	if(slRet < 0)
 	{
 		OS_MEM_FREE(pstTimerInfo);

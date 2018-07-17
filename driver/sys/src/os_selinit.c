@@ -96,7 +96,7 @@ void os_init(void)
     //init timer driver system
     os_timerSchedualInit(OS_TIMER_RATE);
 
-	printf("Now init ttask \n");
+	printf("Now init task \n");
 	//init task shedual system
 	os_task_shedualInit();
 

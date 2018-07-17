@@ -11,14 +11,32 @@
 #include "log.h"
 
 
-#define MAX_MUTEX_NUM 20
+#define MAX_MUTEX_NUM 30
+#define MAX_SEM_NUM   30
+#define MAX_SPIN_NUM  30
+
+typedef enum
+{
+    _LOCK_MUTEX = 1,
+    _LOCK_SEM,
+    _LOCK_LOCK
+}LOCK_TYPE;
+typedef enum
+{
+    _ACTION_INIT = 1,
+    _ACTION_DEINIT,
+    _ACTION_LOCK,
+    _ACTION_UNLOCK,
+    _ACTION_ALL
+}LOCK_ACTION;
 
 typedef struct
 {
     bool isAlive;
-    pthread_mutex_t *mutex;
+    void *lock;
     INT8 strName[128];
-}MUTEX_INFO;
+}LOCK_INFO;
+
 
 INT32 lock_mutexInit(pthread_mutex_t *mutex,const char * strName);
 INT32 lock_mutexDetroy(pthread_mutex_t *mutex);
@@ -61,6 +79,14 @@ int lock_SpinTryLock(pthread_spinlock_t *lock,const char * strFunName,UINT32 ulL
 #define LOCK_SPIN_DEINIT(lock)                lock_SpinDeInit(lock,__FUNCTION__,__LINE__)
 #define LOCK_SPIN_LOCK(lock)                  lock_SpinLock(lock,__FUNCTION__,__LINE__)
 #define LOCK_SPIN_TRYLOCK(lock)               lock_SpinTryLock(lock,__FUNCTION__,__LINE__)
+
+
+
+void os_enter_critical(const char * strFunName,UINT32 ulLine);
+void os_levea_critical(const char * strFunName,UINT32 ulLine);
+
+#define OS_ENTER_CRITICAL(lock)             os_enter_critical(lock,__FUNCTION__,__LINE__)
+#define OS_LEVEA_CRITICAL(lock)             os_levea_critical(lock,__FUNCTION__,__LINE__)
 
 void lock_init(void);   
 #endif

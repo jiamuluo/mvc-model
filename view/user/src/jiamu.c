@@ -14,7 +14,7 @@ void jiamu_init(void *arg)
 {
     char *pucMsg = OS_MEM_MALLOC(64);
     memset(pucMsg,0,64);
-    strcpy(pucMsg,"This is jiamu timer \n");
+    strcpy(pucMsg,"This is jiamu timer");
 
     printf("Init jiamu task \n");
     os_timerAddNewOne(5000,
