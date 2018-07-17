@@ -48,6 +48,9 @@
 *****************************************************************************/
 #define OS_QUEUE_MAX   256
 #define OS_QIEIE_QUOTE 10 //peak num of one handle time,avoid to take too much time
+
+
+
 /*********************************user define********************************/
 typedef enum
 {
@@ -57,8 +60,6 @@ typedef enum
     TIMER_SYS_MAX ,
 }OS_TIMER_MSG_TYPE;
 
-
-//need user define
 typedef enum
 {
     _MSG_OUT,
