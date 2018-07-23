@@ -12,4 +12,5 @@
 
 void time_GetSysUptime(long *pulTime);
 void time_GetCurrentTimeus(char *buf, unsigned int buflen);
+void time_FeedDog(void);
 #endif

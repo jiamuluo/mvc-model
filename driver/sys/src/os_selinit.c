@@ -14,6 +14,7 @@ extern INT32 os_timerSchedualInit(UINT32 ulTimerRateMs);
 extern void log_init(const char * strAppName);
 extern void os_queue_init(void);
 extern void os_task_shedualInit(void);
+extern void lock_init(void);   
 
 void os_checkExist(void)
 {
@@ -83,6 +84,9 @@ void os_init(void)
 
     //init log system
     log_init(APP_NAME);
+
+	//init lock system
+	lock_init();
 
 	printf("Now init queue \n");
 	//init queue manage system
