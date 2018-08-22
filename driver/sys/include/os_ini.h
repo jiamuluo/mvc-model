@@ -25,7 +25,7 @@
 #define ini_remove(filename)          remove(filename)
 #define ini_rewind(file)              rewind(*(file))
 
-#define DEVMNG_FILE_INI		"/usr/local/etc/devmng.ini"	
+#define CONFIG_FILE_INI		"/usr/local/etc/os.ini"	
 
 #if (defined _UNICODE || defined __UNICODE__ || defined UNICODE) && !defined INI_ANSIONLY
 #include <tchar.h>
